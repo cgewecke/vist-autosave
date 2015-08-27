@@ -1,6 +1,6 @@
 //serviceService.js
 
-angular.module('vist.autosave')
+angular.module('vist.autosave', ['vist', 'vist.resources'])
 
 .service('autoSaveService', ['$q', 'Playlists', 'Playlist', 'PlaylistItems', 'PlaylistItem',
    function($q, Playlists, Playlist, PlaylistItems, PlaylistItem ){
@@ -14,6 +14,14 @@ angular.module('vist.autosave')
    // service.queue.push({ fn: 'add_playlist', playlist: {...}, model: {...} }) 
    // service.queue.push({ fn: 'update_playlist_title', playlist: {...}, title: string })
    
+   // Constants
+   var SAVE_VIDEO = 1,
+       UPDATE_VIDEO_TITLE = 2, 
+       REMOVE_VIDEO = 3, 
+       ADD_PLAYLIST = 4, 
+       UPDATE_PLAYLIST_TITLE = 5;
+
+
    // Variables
    this.finished = null; // Promise resolved when queue has emptied.
    this.queue = []; // Save queue
@@ -42,6 +50,7 @@ angular.module('vist.autosave')
 
    function flush(){
 
+      // De-queue
       if (service.queue.length){
 
          var queued = service.queue.shift();
@@ -51,7 +60,6 @@ angular.module('vist.autosave')
                PlaylistItems.create(queued.video, { playlistId: queued.playlist.id }, 
                   function( result ) { 
                      angular.extend(queued.model, result);
-                     console.log(queued.fn  + ' : ' + queued.model.title);
                      flush(); 
                   },
                   function(failure){
@@ -62,7 +70,6 @@ angular.module('vist.autosave')
             case 'update_video_title':
                PlaylistItem.update( queued.changes, {id: queued.video.id}, 
                   function(result){
-                     console.log(queued.fn  + ' : '  + queued.video.title);
                      flush();
                   }, 
                   function(failure){
@@ -73,7 +80,6 @@ angular.module('vist.autosave')
             case 'remove_video':
                new PlaylistItem({id: queued.video.id}).$remove(
                   function(success){
-                     console.log(queued.fn  + ' : ' + queued.video.title);
                      flush();
                   },
                   function(failure){
@@ -85,7 +91,6 @@ angular.module('vist.autosave')
                Playlists.save(queued.playlist,
                   function(result){ 
                     angular.extend(queued.model, result); 
-                    console.log(queued.fn  + ' : ' + queued.model.title );
                     flush();   
                   },
                   function(failure){
@@ -96,7 +101,6 @@ angular.module('vist.autosave')
             case 'update_playlist_title':
                Playlist.update({ id: queued.playlist.id }, { title: queued.title, vist_title: S(queued.title).slugify().s},
                   function(success){
-                    console.log(queued.fn  + ' : ' + queued.playlist.title );
                     flush(); 
                   },
                   function(failure){
@@ -105,8 +109,8 @@ angular.module('vist.autosave')
                ); 
                break;
          }
+      // Queue empty   
       } else {
-         console.log('Save queue empty');
          service.finished.resolve();
       }
       
